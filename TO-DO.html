@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Mate - To-Do List</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+  <div class="max-w-3xl mx-auto bg-white shadow-xl rounded-lg p-6">
+    <h1 class="text-3xl font-bold mb-4 text-center">Task Mate</h1>
+
+    <!-- Task Form -->
+    <div class="grid md:grid-cols-4 gap-2 mb-4">
+      <input id="title" class="border rounded p-2" type="text" placeholder="Title" />
+      <input id="description" class="border rounded p-2" type="text" placeholder="Description" />
+      <input id="dueDate" class="border rounded p-2" type="date" />
+      <input id="category" class="border rounded p-2" type="text" placeholder="Category" />
+    </div>
+    <button id="addBtn" onclick="addTask()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Task</button>
+
+    <!-- Search and Filter -->
+    <div class="grid md:grid-cols-2 gap-2 my-4">
+      <input id="search" class="border rounded p-2" type="text" placeholder="Search tasks..." oninput="renderTasks()" />
+      <input id="filter" class="border rounded p-2" type="text" placeholder="Filter by category" oninput="renderTasks()" />
+    </div>
+
+    <!-- Task List -->
+    <div id="taskList" class="grid gap-4"></div>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let editingTaskId = null;
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function addTask() {
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const dueDate = document.getElementById('dueDate').value;
+      const category = document.getElementById('category').value.trim();
+
+      if (!title || !description) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      if (editingTaskId) {
+        const task = tasks.find(t => t.id === editingTaskId);
+        if (task) {
+          task.title = title;
+          task.description = description;
+          task.dueDate = dueDate;
+          task.category = category;
+        }
+        editingTaskId = null;
+        document.getElementById('addBtn').innerText = "Add Task";
+      } else {
+        tasks.push({
+          id: Date.now(),
+          title,
+          description,
+          dueDate,
+          category,
+          completed: false
+        });
+      }
+
+      saveTasks();
+      clearForm();
+      renderTasks();
+    }
+
+    function clearForm() {
+      ['title', 'description', 'dueDate', 'category'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    function toggleComplete(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.completed = !task.completed;
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      renderTasks();
+    }
+
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        document.getElementById('title').value = task.title;
+        document.getElementById('description').value = task.description;
+        document.getElementById('dueDate').value = task.dueDate;
+        document.getElementById('category').value = task.category;
+        editingTaskId = id;
+        document.getElementById('addBtn').innerText = "Save Changes";
+      }
+    }
+
+    function renderTasks() {
+      const list = document.getElementById('taskList');
+      const search = document.getElementById('search').value.toLowerCase();
+      const filter = document.getElementById('filter').value.toLowerCase();
+      list.innerHTML = '';
+
+      const filtered = tasks.filter(task =>
+        (task.title.toLowerCase().includes(search) || task.description.toLowerCase().includes(search)) &&
+        (filter === '' || task.category.toLowerCase().includes(filter))
+      );
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<p class="text-center text-gray-500">No tasks found.</p>';
+        return;
+      }
+
+      filtered.forEach(task => {
+        const taskCard = document.createElement('div');
+        taskCard.className = `p-4 rounded-lg shadow-md ${task.completed ? 'bg-green-100' : 'bg-white'}`;
+        taskCard.style.borderLeft = `4px solid ${task.completed ? 'green' : 'blue'}`;
+        taskCard.innerHTML = `
+          <h2 class="text-xl font-semibold">${task.title}</h2>
+          <p>${task.description}</p>
+          <p class="text-sm text-gray-600">Due: ${task.dueDate || 'No due date'}</p>
+          <p class="text-sm text-gray-600">Category: ${task.category || 'None'}</p>
+          <div class="flex gap-2 mt-2 flex-wrap">
+            <button onclick="toggleComplete(${task.id})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">
+              ${task.completed ? 'Mark Incomplete' : 'Mark Completed'}
+            </button>
+            <button onclick="editTask(${task.id})" class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">Edit</button>
+            <button onclick="deleteTask(${task.id})" class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Delete</button>
+          </div>
+        `;
+        list.appendChild(taskCard);
+      });
+    }
+
+    renderTasks();
+  </script>
+</body>
+</html>
